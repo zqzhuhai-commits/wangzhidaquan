@@ -18,6 +18,7 @@ static int site_count=21;
 #define ACTION_ADD (-1)
 #define ACTION_EDIT (-2)
 #define ACTION_DELETE (-3)
+#define ACTION_MODE (-4)
 static int manage_target=-1;
 static struct { int count; } custom={0};
 static int total_sites(void){return site_count;}
@@ -46,6 +47,10 @@ int main(void) {
         move(0,1);assert(selected==1);
         SDL_Rect r=rect_for(WECHAT_SITE_INDEX+2);
         assert(hit_test(r.x+10,r.y+10)==WECHAT_SITE_INDEX+2);
+        selected=WECHAT_SITE_INDEX+2;move(-1,0);assert(selected==ACTION_MODE);
+        r=rect_for(ACTION_MODE);assert(hit_test(r.x+10,r.y+10)==ACTION_MODE);
+        move(1,0);assert(selected==WECHAT_SITE_INDEX+2);
+        move(-1,0);move(0,1);assert(selected==0);
     }
     puts("Navigation passed: 21 and 1005 sites, focus visibility, bounds, touch hit regions, WeChat shortcut");
 }

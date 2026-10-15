@@ -7,12 +7,16 @@
 #include "url.h"
 #include "sites.h"
 #include "bookmarks.h"
+#include "browser.h"
 #include <sys/stat.h>
 #include <errno.h>
 #define BOOKMARK_PATH "sdmc:/switch/SwitchWebNav/bookmarks.tsv"
 #define ACTION_ADD (-1)
 #define ACTION_EDIT (-2)
 #define ACTION_DELETE (-3)
+#define ACTION_MODE (-4)
+static BrowserMode browser_mode=BrowserMode_Standard;
+static const char *mode_name(void) { return browser_mode==BrowserMode_Wifi?"Wi-Fi（实验）":"普通网页"; }
 static Bookmarks custom={0};
 static int manage_target=-1,confirm_delete=0;
 static int total_sites(void) { return SITE_COUNT+(int)custom.count; }
@@ -53,6 +57,7 @@ static void text(const char *s,int x,int y,int size,unsigned c,int maxw) {
     SDL_DestroyTexture(texture); SDL_FreeSurface(surface);
 }
 static SDL_Rect rect_for(int index) {
+    if(index==ACTION_MODE)return (SDL_Rect){500,99,408,42};
     if(index==ACTION_ADD)return (SDL_Rect){56,578,520,40};
     if(index==ACTION_EDIT)return (SDL_Rect){592,578,300,40};
     if(index==ACTION_DELETE)return (SDL_Rect){908,578,316,40};
@@ -66,6 +71,11 @@ static void render(void) {
     panel((SDL_Rect){56,40,50,50},0x2474ef); text("N",69,44,2,0xffffff,40);
     text("网址导航",122,38,2,0x172b4d,500);
     text("SWITCH WEB NAV",124,88,0,0x78869a,400);
+    SDL_Rect mode=rect_for(ACTION_MODE);
+    if(selected==ACTION_MODE)panel((SDL_Rect){mode.x-4,mode.y-4,mode.w+8,mode.h+8},0x2e83f5);
+    panel(mode,browser_mode==BrowserMode_Wifi?0xffe8c5:0xe1eaf7);
+    char mode_label[96];snprintf(mode_label,sizeof(mode_label),"L 切换模式 · %s",mode_name());
+    text(mode_label,mode.x+16,mode.y+10,0,0x39638f,mode.w-24);
     panel((SDL_Rect){1050,52,174,35},0xe1eaf7);char count_label[64];snprintf(count_label,sizeof(count_label),"站点入口 · %d",total_sites());text(count_label,1068,58,0,0x39638f,160);
     for(int i=0;i<2;i++) {
         SDL_Rect r=rect_for(i); if(selected==i)panel((SDL_Rect){r.x-4,r.y-4,r.w+8,r.h+8},0x2e83f5);
@@ -113,21 +123,37 @@ static void render(void) {
     }
     SDL_RenderPresent(renderer);
 }
+static int storage_ready(void);
+static int log_browser_report(BrowserReport report) {
+    if(!storage_ready())return 0;
+    FILE *f=fopen("sdmc:/switch/SwitchWebNav/browser.log","a");
+    if(!f)return 0;
+    u32 version=hosversionGet();
+    int ok=fprintf(f,"HOS=%u.%u.%u applet=%u mode=%s stage=%s rc=0x%08X reply=0x%08X exit=%s%u\n",
+        (unsigned)((version>>16)&255),(unsigned)((version>>8)&255),(unsigned)(version&255),
+        (unsigned)appletGetAppletType(),browser_mode==BrowserMode_Wifi?"wifi":"standard",report.stage,
+        (unsigned)report.rc,(unsigned)report.reply_rc,report.has_exit_reason?"":"unavailable/",
+        report.has_exit_reason?(unsigned)report.exit_reason:0)>=0;
+    if(fclose(f))ok=0;
+    return ok;
+}
+static void toggle_browser_mode(void) {
+    browser_mode=browser_mode==BrowserMode_Standard?BrowserMode_Wifi:BrowserMode_Standard;
+    snprintf(status,sizeof(status),"当前：%s。请选择网址测试；Wi-Fi 模式尚未实机验证",mode_name());
+}
 static void open_url(const char *raw) {
     char url[URL_CAP];
     if(!normalize_url(raw,url,sizeof(url))) { snprintf(status,sizeof(status),"请输入有效的 HTTP / HTTPS 网址（域名或 IPv4，可带端口）");return; }
     if(appletGetAppletType()!=AppletType_Application && appletGetAppletType()!=AppletType_SystemApplication) {
         snprintf(status,sizeof(status),"请按住 R 启动一个游戏进入 hbmenu，以完整应用模式运行本程序");return;
     }
-    snprintf(status,sizeof(status),"正在打开系统网页组件…");render();
-    WebCommonConfig config; WebCommonReply reply;
-    Result rc=webPageCreate(&config,url);
-    if(R_SUCCEEDED(rc))rc=webConfigSetWhitelist(&config,"^https?://.*");
-    if(R_SUCCEEDED(rc))rc=webConfigSetFooter(&config,true);
-    if(R_SUCCEEDED(rc))rc=webConfigSetPointer(&config,true);
-    if(R_SUCCEEDED(rc))rc=webConfigShow(&config,&reply);
-    if(R_FAILED(rc))snprintf(status,sizeof(status),"网页组件启动失败：0x%08X，请检查运行模式和系统环境",(unsigned)rc);
-    else snprintf(status,sizeof(status),"已返回网址导航");
+    snprintf(status,sizeof(status),"正在打开：%s…",mode_name());render();
+    BrowserReport report=browser_open(browser_mode,url);
+    int logged=log_browser_report(report);
+    if(R_FAILED(report.rc))snprintf(status,sizeof(status),"%s %s R=%08X",mode_name(),report.stage,(unsigned)report.rc);
+    else if(browser_mode==BrowserMode_Wifi)snprintf(status,sizeof(status),"Wi-Fi R=%08X reply=%08X（%s）",(unsigned)report.rc,(unsigned)report.reply_rc,R_FAILED(report.reply_rc)?"组件返回错误":"已返回，不代表页面已加载");
+    else snprintf(status,sizeof(status),"普通 R=%08X exit=%u（%s）",(unsigned)report.rc,(unsigned)report.exit_reason,report.exit_reason==WebExitReason_ErrorDialog?"系统错误弹窗":"已返回");
+    if(!logged){size_t n=strlen(status);snprintf(status+n,sizeof(status)-n," · 日志未保存");}
 }
 static void edit_url(void) {
     SwkbdConfig kbd; Result rc=swkbdCreate(&kbd,0);
@@ -175,7 +201,8 @@ static void delete_bookmark(void) {
     manage_target=-1;selected=ACTION_ADD;scroll_by(0);snprintf(status,sizeof(status),"自定义网址已删除");
 }
 static void activate(void) {
-    if(selected==ACTION_ADD)change_bookmark(0);
+    if(selected==ACTION_MODE)toggle_browser_mode();
+    else if(selected==ACTION_ADD)change_bookmark(0);
     else if(selected==ACTION_EDIT)change_bookmark(1);
     else if(selected==ACTION_DELETE)delete_bookmark();
     else if(selected==0)edit_url();
@@ -191,12 +218,13 @@ static void ensure_visible(void) {
     else if(r.y+r.h>list_view.y+list_view.h-4)scroll_by(r.y+r.h-list_view.y-list_view.h+4);
 }
 static void move(int dx,int dy) {
+    if(selected==ACTION_MODE) { if(dy>0)selected=0;else if(dx)selected=WECHAT_SITE_INDEX+2;return; }
     if(selected<0) {
         if(dx)selected=-1-(((-selected-1)+dx+3)%3);
         if(dy<0){selected=(manage_target>=0&&manage_target<(int)custom.count)?2+SITE_COUNT+manage_target:2+site_at(grid_count()-1);ensure_visible();}
         return;
     }
-    if(selected==WECHAT_SITE_INDEX+2) { if(dy>0)selected=1;else if(dx)selected=dx<0?0:1;return; }
+    if(selected==WECHAT_SITE_INDEX+2) { if(dy>0)selected=1;else if(dx)selected=dx<0?ACTION_MODE:1;return; }
     if(selected<2) { if(dy>0)selected=selected==0?2:5;else if(dy<0)selected=WECHAT_SITE_INDEX+2;else if(dx)selected=1-selected; }
     else { int n=grid_pos(selected-2),row=n/4,col=n%4;
         if(dy<0 && row==0)selected=col==3?1:0;
@@ -205,6 +233,8 @@ static void move(int dx,int dy) {
     ensure_visible();
 }
 static int hit_test(int x,int y) {
+    SDL_Rect mode=rect_for(ACTION_MODE);
+    if(x>=mode.x&&x<mode.x+mode.w&&y>=mode.y&&y<mode.y+mode.h)return ACTION_MODE;
     for(int i=0;i<total_sites()+2;i++) {
         if(i>=2 && i!=WECHAT_SITE_INDEX+2 && (y<list_view.y || y>=list_view.y+list_view.h))continue;
         SDL_Rect r=rect_for(i);if(x>=r.x&&x<r.x+r.w&&y>=r.y&&y<r.y+r.h)return i;
@@ -256,6 +286,7 @@ int main(int argc,char **argv) {
         if(down&HidNpadButton_ZR)scroll_by(240);
         if(down&HidNpadButton_ZL)scroll_by(-240);
         if(down&HidNpadButton_B)selected=0;
+        if(down&HidNpadButton_L)toggle_browser_mode();
         if(down&HidNpadButton_X)edit_url();else if(down&HidNpadButton_Y)change_bookmark(1);else if(down&HidNpadButton_Minus)delete_bookmark();else if(down&HidNpadButton_A)activate();
         HidTouchScreenState touch={0};hidGetTouchScreenStates(&touch,1);
         bool touched=touch.count>0;
