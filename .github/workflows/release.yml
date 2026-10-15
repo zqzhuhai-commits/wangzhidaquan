@@ -1,0 +1,36 @@
+name: Publish Release
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['dist/SHA256SUMS.txt', '.github/workflows/release.yml']
+permissions:
+  contents: write
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: v1.2.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check bookmark persistence and navigation
+        run: |
+          cc -Drename=sd_rename -Wall -Wextra -Werror source/url.c source/bookmarks.c tests/test_bookmarks.c -o /tmp/bookmarks-test
+          /tmp/bookmarks-test
+          cc -Wall -Wextra -Werror source/url.c tests/test_url.c -o /tmp/url-test
+          /tmp/url-test
+          python3 tests/test_navigation.py
+      - name: Check release files
+        run: cd dist && sha256sum -c SHA256SUMS.txt
+      - name: Publish binaries
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/SwitchWebNav.nsp dist/SwitchWebNav.nro dist/SHA256SUMS.txt --clobber
+          else
+            gh release create "$RELEASE_TAG" dist/SwitchWebNav.nsp dist/SwitchWebNav.nro dist/SHA256SUMS.txt --target "$GITHUB_SHA" --title "Switch 网址大全 v1.2.0" --notes-file RELEASE_NOTES.md
+          fi

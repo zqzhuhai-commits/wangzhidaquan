@@ -1,4 +1,4 @@
-# 1.1.0 编译产物
+# 1.2.0 编译产物
 
 - `SwitchWebNav.nsp`：独立安装版，内含应用，无需外置 NRO 或配置文件。
 - `SwitchWebNav.nro`：hbmenu 运行版，打开网页时使用完整应用模式。

@@ -4,19 +4,20 @@
 
 ## 下载
 
-- [独立 NSP 安装包](https://github.com/zqzhuhai-commits/wangzhidaquan/raw/refs/heads/main/dist/SwitchWebNav.nsp)
-- [NRO 版本](https://github.com/zqzhuhai-commits/wangzhidaquan/raw/refs/heads/main/dist/SwitchWebNav.nro)
+- [Releases 正式下载](https://github.com/zqzhuhai-commits/wangzhidaquan/releases/latest)
+- [独立 NSP 安装包](https://github.com/zqzhuhai-commits/wangzhidaquan/releases/download/v1.2.0/SwitchWebNav.nsp)
+- [NRO 版本](https://github.com/zqzhuhai-commits/wangzhidaquan/releases/download/v1.2.0/SwitchWebNav.nro)
 - [HTML 界面预览](preview/index.html)（下载后在电脑浏览器打开）
 
-版本 **1.1.0**，Title ID **0100C0DE57560000**。
+版本 **1.2.0**，Title ID **0100C0DE57560000**。
 
-**NSP 是独立应用包，不是指向外置 NRO 的转发器。** 安装后无需在 SD 卡保留 NRO、config.ini、cacert.pem 或密钥文件。NRO 另行提供，供 hbmenu 用户使用。
+**NSP 是独立应用包，不是指向外置 NRO 的转发器。** 安装后无需在 SD 卡保留 NRO、config.ini、cacert.pem 或密钥文件。用户新增的网址会自动保存在 SD 卡的 `/switch/SwitchWebNav/bookmarks.tsv` 中。NRO 另行提供，供 hbmenu 用户使用。
 
 ## 网站和操作
 
 输入框下方保留百度、必应、哔哩哔哩、腾讯视频、爱奇艺、优酷、知乎、微博、央视网、人民网、京东、淘宝。
 
-新增一行在线小游戏：**4399 小游戏、4399 在线玩（H5）、7k7k 小游戏、17yy 小游戏（H5）**。顶部独立加入 [微信文件传输助手](https://filehelper.weixin.qq.com/)。共 17 个默认入口。
+新增一行在线小游戏：**4399 小游戏、4399 在线玩（H5）、7k7k 小游戏、17yy 小游戏（H5）**。顶部独立加入 [微信文件传输助手](https://filehelper.weixin.qq.com/)。另外新增一行网页版云游戏：腾讯 START、网易云游戏、腾讯先锋、咪咕快游。共 21 个默认入口。
 
 | 操作 | 功能 |
 | --- | --- |
@@ -29,9 +30,22 @@
 | 触屏上下拖动 | 滚动网站列表，拖动不会误触打开站点 |
 | + | 退出导航前端 |
 
-网站列表使用独立滚动区域，没有固定屏幕行数限制。新增源码中的站点后，滚动范围自动计算；已用 1,001 个站点的布局进行检查。当前内置 17 个链接，滚到底部后停止，不会重复生成相同站点。
+网站列表使用独立滚动区域，没有固定屏幕行数限制。新增源码中的站点后，滚动范围自动计算；已用 1,005 个站点的布局进行检查。当前内置 21 个链接，滚到底部后停止，不会重复生成相同站点。
 
 输入网址自动补全 `https://`；支持 HTTP、HTTPS、IPv4、端口和中文路径。主机名限 ASCII，中文域名使用 Punycode；目前不支持 IPv6 字面地址。系统键盘输入最多 500 个字符。
+
+## 自定义网址
+
+列表下方新增 **添加自定义网址 / 编辑选中网址 / 删除选中网址**：
+
+1. 点击“添加自定义网址”，依次输入名称和网址，确认保存。
+2. 自定义网址显示在“我的网址”分组中，和其他站点一样可点击打开、上下滚动。
+3. 先选中一个自定义网址，再点击编辑或删除；也可以使用 Y 编辑、− 删除。删除前显示确认框（A 确认、B 取消）。
+4. 重启应用后自动恢复。更新 NSP 时不要删除 SD 卡中的书签数据文件。
+
+名称最多 32 字，网址最多 500 字符。保存前验证网址、检查重复；写入失败时不会保留未保存的内存更改。无需自己准备数据文件，首次保存时自动创建。书签只保存在本机，不会上传到 GitHub 或其他服务器。HTML 预览使用当前浏览器的本地存储，与 Switch 数据独立。
+
+网页版云游戏仅提供官方入口；Switch 内置网页组件可能不支持所需的视频编解码、WebRTC、手柄接口或登录流程，不保证能实际运行云游戏。
 
 ## 安装与运行
 
@@ -49,7 +63,8 @@ Switch 内置网页组件与桌面浏览器的兼容性不同。小游戏入口�
 
 - 已用 devkitA64 r30 / GCC 16.1.0、libnx 4.12.0、SDL2 2.28.5、SDL2_ttf 2.22.0 成功交叉编译。
 - NSP 已检查 PFS0 结构、三个 NCA 的内容哈希、NCA 头部、Title ID、大小及区段边界。
-- 网址逻辑检查通过；导航检查覆盖 17 / 1,001 个站点、焦点可见性、滚动上下界及触屏命中区域。
+- 网址逻辑检查通过；导航检查覆盖 21 / 1,005 个站点、焦点可见性、滚动上下界及触屏命中区域。
+- 自定义网址已检查保存恢复、编辑、删除、重复与无效数据、129 条记录及写入失败回滚。
 - HTML JavaScript 语法检查通过。
 - **尚未经 Switch 实机验证；系统网页组件启动、站点登录、小游戏和视频兼容性需在实机确认。**
 
@@ -83,6 +98,8 @@ python3 tools/package_nsp.py \
 cc -Wall -Wextra -Werror source/url.c tests/test_url.c -o /tmp/webnav-test
 /tmp/webnav-test
 python3 tests/test_navigation.py
+cc -Wall -Wextra -Werror source/url.c source/bookmarks.c tests/test_bookmarks.c -o /tmp/bookmarks-test
+/tmp/bookmarks-test
 ```
 
 ## 参考与致谢

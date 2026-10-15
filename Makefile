@@ -40,7 +40,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 TARGET		:=	SwitchWebNav
 export APP_TITLE := Switch Web Nav
 export APP_AUTHOR := ZQZH
-export APP_VERSION := 1.1.0
+export APP_VERSION := 1.2.0
 export APP_TITLEID := 0100c0de57560000
 BUILD		:=	build
 SOURCES		:=	source

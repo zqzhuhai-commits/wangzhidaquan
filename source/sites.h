@@ -19,7 +19,11 @@ static const Site sites[] = {
  {"4399在线玩", "https://h.4399.com/", "H5小游戏", 0x22a67b},
  {"7k7k小游戏", "https://m.7k7k.com/", "小游戏", 0x6f70df},
  {"17yy小游戏", "https://h.17yy.com/", "H5小游戏", 0xe46c8c},
- {"微信文件传输助手", "https://filehelper.weixin.qq.com/", "文件传输", 0x18aa59}
+ {"微信文件传输助手", "https://filehelper.weixin.qq.com/", "文件传输", 0x18aa59},
+ {"腾讯START", "https://start.qq.com/m/cloudgame/index.html", "云游戏", 0x3777e8},
+ {"网易云游戏", "https://cg.163.com/", "云游戏", 0xd34f51},
+ {"腾讯先锋", "https://gamer.qq.com/", "云游戏", 0x477dc0},
+ {"咪咕快游", "https://www.migufun.com/", "云游戏", 0x17a986}
 };
 #define WECHAT_SITE_INDEX 16
 #define SITE_GRID_COUNT (SITE_COUNT-1)
