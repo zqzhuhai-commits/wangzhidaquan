@@ -2,6 +2,19 @@
 
 简易 Nintendo Switch Homebrew 网址导航。输入网址并确认，或选择站点后，调用 Switch 内置网页组件打开页面。退出网页组件后回到导航。
 
+## 1.2.1-test 网页组件诊断版
+
+本分支源码加入实验性 **Wi-Fi 网页模式**，用于排查“所有网址均提示无法使用此功能”。**尚未经 Switch 23.0.1 或其他版本实机验证，不保证能解决该提示。** 此次未更新 `dist/` 二进制或 Releases；下面原有下载链接仍为 1.2.0，不含这个功能。测试版需从本分支重新编译，并用原有打包脚本生成 NSP。
+
+- 默认使用原来的普通网页模式。按 **L** 或点击顶部模式按钮切换为 **Wi-Fi（实验）**，再打开同一个网址进行对比；再次切换可恢复普通模式。选择只对本次运行有效，不会自动重试其他模式。
+- 手柄也可从网址输入框按上进入微信按钮，再按左进入模式按钮，按 A 切换。
+- 普通模式调用 `webPageCreate` / `webConfigShow`；Wi-Fi 模式调用独立的 `webWifiCreate` / `webWifiShow`。Wi-Fi 模式不设置连接测试 URL，因此不指定或修改网络配置、不更改 DNS。它原本是联网认证页面入口，不是完整通用浏览器。
+- 返回后底部显示诊断：`R` 为调用结果，非零表示失败；普通模式 `exit=7` 表示组件显示了系统错误弹窗。Wi-Fi 的 `reply` 为组件返回结果，非零表示组件报告错误。**`R=0` / `reply=0` 不能证明目标页面已成功加载。** Wi-Fi 返回结构没有普通模式的退出原因字段，不会伪造此信息。
+- 每次调用后尝试追加保存 `/switch/SwitchWebNav/browser.log`，内容仅有系统版本、应用运行类型、模式、失败阶段、调用结果、组件结果及可用的退出原因，不记录访问网址或网页内容。保存失败会在底部提示“日志未保存”。日志可手动删除，不影响书签。
+- 测试时分别以两种模式打开同一个简单网页，记下页面是否出现、是否弹窗和支持代码；退出后提供 `browser.log`。仅凭错误提示不能确定系统禁用了某个入口。视频、登录、云游戏等兼容性另行验证。
+
+接口结构与限制参考 [libnx 网页组件文档](https://switchbrew.github.io/libnx/web_8h.html)。HTML 预览仍只模拟导航界面，不能测试 Switch 网页组件。
+
 ## 下载
 
 - [Releases 正式下载](https://github.com/zqzhuhai-commits/wangzhidaquan/releases/latest)
@@ -26,6 +39,7 @@
 | X | 系统键盘输入网址，键盘确认后直接打开 |
 | B | 焦点回到网址输入框 |
 | ZL / ZR | 列表向上 / 向下翻页 |
+| L（测试分支） | 切换普通 / Wi-Fi（实验）网页模式 |
 | 触屏点击 | 输入网址或进入站点 |
 | 触屏上下拖动 | 滚动网站列表，拖动不会误触打开站点 |
 | + | 退出导航前端 |
@@ -98,6 +112,7 @@ python3 tools/package_nsp.py \
 cc -Wall -Wextra -Werror source/url.c tests/test_url.c -o /tmp/webnav-test
 /tmp/webnav-test
 python3 tests/test_navigation.py
+python3 tests/test_browser.py
 cc -Wall -Wextra -Werror source/url.c source/bookmarks.c tests/test_bookmarks.c -o /tmp/bookmarks-test
 /tmp/bookmarks-test
 ```
